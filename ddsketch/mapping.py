@@ -202,16 +202,20 @@ class LogarithmicMaxMinMapping(LogarithmicMapping):
     key values targeting both given max-min values for the keys
     """
 
-    def __init__(self, relative_accuracy, max_value, min_value):
-        super().__init__(relative_accuracy, offset=0.0)
+    def __init__(self, max_value, min_value, relative_accuracy=None, bin_limit=None,):
         if max_value <= min_value:
             raise IllegalArgumentException("Max value should be greater than min value")
         if max_value < 0 or min_value < 0:
             raise IllegalArgumentException("Max and min values should be both greater than 0")
+        # if relative_accuracy is not defined, compute it based on bin_limit
+        # and max/min_value
+        if relative_accuracy is None:
+            assert bin_limit is not None, "relative_accuracy and bin_limit can't be both None"
+            gamma = math.pow(max_value/min_value,1/float(bin_limit - 1))
+            relative_accuracy = 1 - 2/(gamma + 1)
+        super().__init__(relative_accuracy, offset=0.0)
         self.max_value = max_value
         self.min_value = min_value
-        self.negative_max_value = -min_value
-        self.negative_min_value = -max_value
         # compute max and min key value
         self.max_key_value = super().key(self.max_value)
         self.min_key_value = super().key(self.min_value)
