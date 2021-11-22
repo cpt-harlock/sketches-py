@@ -37,10 +37,11 @@ DDSketch implementations are also available in:
 
 from .exception import IllegalArgumentException
 from .exception import UnequalSketchParametersException
-from .mapping import LogarithmicMapping
+from .mapping import LogarithmicMapping, LogarithmicMaxMinMapping
 from .store import CollapsingHighestDenseStore
 from .store import CollapsingLowestDenseStore
 from .store import DenseStore
+from .store import FixedSizeStore
 
 
 DEFAULT_REL_ACC = 0.01  # "alpha" in the paper
@@ -281,3 +282,18 @@ class LogCollapsingHighestDenseDDSketch(BaseDDSketch):
             negative_store=negative_store,
             zero_count=0,
         )
+
+class FixedSizeDDSketch(BaseDDSketch):
+    def __init__(self, max_value, min_value, relative_accuracy=None ):
+
+        # Make sure the parameters are valid
+        if relative_accuracy is None:
+            relative_accuracy = DEFAULT_REL_ACC
+
+        mapping = LogarithmicMaxMinMapping(relative_accuracy, max_value, min_value)
+        store = FixedSizeStore(mapping.min_key_value, mapping.max_key_value)
+        negative_store = FixedSizeStore(mapping.min_key_value, mapping.max_key_value)
+        super().__init__(
+            mapping=mapping, store=store, negative_store=negative_store, zero_count=0
+        )
+

@@ -429,3 +429,87 @@ class CollapsingHighestDenseStore(DenseStore):
             self.bins[key - self.offset] += store.bins[key - store.offset]
 
         self.count += store.count
+
+
+class FixedSizeStore(Store):
+    """A dense store that keeps all the bins between the bin for the min_key and the
+    bin for the max_key, but collapsing the right-most bins if the number of bins
+    exceeds the bin_limit
+
+    Args:
+        min_key (int) : the minimum key bin
+        max_key (int) : the maximum key bin
+    Attributes:
+        count (int): the sum of the counts for the bins
+        min_key (int): the minimum key bin
+        max_key (int): the maximum key bin
+        offset (int): the difference btw the keys and the index in which they are stored
+        bins (List[int]): the bins
+    """
+    def __init__(self, min_key, max_key):
+        self.count = 0
+        self.min_key = min_key
+        self.max_key = max_key
+        self.bin_limit = (max_key - min_key) + 1
+        self.offset = min_key
+        self.bins = [0] * self.bin_limit
+
+
+    def copy(self, store):
+        """copy the input store into this one"""
+        self.count = store.count
+        self.min_key = store.min_key
+        self.max_key = store.max_key
+        self.bin_limit = store.bin_limit
+        self.offset = store.offset
+        self.bins = store.bins[:]
+
+    def length(self):
+        """the number of bins"""
+        return self.bin_limit
+
+    def add(self, key, weight=1.0):
+        """Updates the counter at the specified index key, growing the number of bins if
+        necessary."""
+        idx = self._get_index(key)
+        self.bins[idx] += weight
+        self.count += weight
+
+    def _get_index(self, key):
+        """calculate the bin index for the key"""
+        return key - self.offset
+
+    def key_at_rank(self, rank, lower=True):
+        """Return the key for the value at given rank.
+
+        E.g., if the non-zero bins are [1, 1] for keys a, b with no offset
+
+        if lower = True:
+             key_at_rank(x) = a for x in [0, 1)
+             key_at_rank(x) = b for x in [1, 2)
+
+        if lower = False:
+             key_at_rank(x) = a for x in (-1, 0]
+             key_at_rank(x) = b for x in (0, 1]
+        """
+        running_ct = 0
+        for i, bin_ct in enumerate(self.bins):
+            running_ct += bin_ct
+            if (lower and running_ct > rank) or (not lower and running_ct >= rank + 1):
+                return i + self.offset
+
+        return self.max_key
+
+    def merge(self, store):
+        """Merge another store into this one. This should be equivalent as running the
+        add operations that have *been run on the other store on this one.
+        For the moment merge only with FixedSizeStore with same min_key, max_key and bin_limit
+        """
+        assert isinstance(store, FixedSizeStore), "Store should be FixedSizeStore"
+        assert store.min_key == self.min_key, "Stores should have same min_key"
+        assert store.max_key == self.max_key, "Stores should have same max_key"
+        assert store.bin_limit == self.bin_limit, "Stores should have same bin amount"
+
+        for idx, _ in enumerate(self.bins):
+            self.bins[idx] += store.bins[idx]
+

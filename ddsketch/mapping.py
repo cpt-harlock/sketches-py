@@ -191,3 +191,45 @@ class CubicallyInterpolatedMapping(KeyMapping):
 
     def _pow_gamma(self, value):
         return self._cubic_exp2_approx(value / self._multiplier)
+
+
+
+class LogarithmicMaxMinMapping(LogarithmicMapping):
+    """
+    A memory-optimal KeyMapping, i.e., given a targeted relative accuracy, it
+    requires the least number of keys to cover a given range of values. This is
+    done by logarithmically mapping floating-point values to integers. It additionally saturates
+    key values targeting both given max-min values for the keys
+    """
+
+    def __init__(self, relative_accuracy, max_value, min_value):
+        super().__init__(relative_accuracy, offset=0.0)
+        if max_value <= min_value:
+            raise IllegalArgumentException("Max value should be greater than min value")
+        if max_value < 0 or min_value < 0:
+            raise IllegalArgumentException("Max and min values should be both greater than 0")
+        self.max_value = max_value
+        self.min_value = min_value
+        self.negative_max_value = -min_value
+        self.negative_min_value = -max_value
+        # compute max and min key value
+        self.max_key_value = super().key(self.max_value)
+        self.min_key_value = super().key(self.min_value)
+        # compute #bins
+        self.number_of_bins = self.max_key_value - self.min_key_value + 1
+
+    def key(self, value):
+        key = super().key(value)
+        # key saturation
+        if key > self.max_key_value:
+            return self.max_key_value
+        if key < self.min_key_value:
+            return self.min_key_value
+        return key
+
+    def value(self, key):
+        if key > self.max_key_value or key < self.min_key_value:
+            raise IllegalArgumentException("Key outside allowed value range")
+
+        return super().value(key)
+
