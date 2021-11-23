@@ -29,6 +29,10 @@ if __name__ == "__main__":
         temp = np.load(file, allow_pickle=True).item()
         for pkt in temp:
             packets.append(PacketRtt(pkt[0], pkt[1], pkt[2], pkt[3], pkt[4]))
+    
+
+    # key stat
+    stat = {}
     # dictionary packet_hash -> ddsketch
     huge_flows = {}
     # dictionary packet_hash -> list of rtt
@@ -42,6 +46,9 @@ if __name__ == "__main__":
         # compute packet hash
         hasher.update((packet.ipsrc, packet.ipdst, packet.sport, packet.dport))
         key = hasher.hexdigest()
+        if (key in stat)
+            stat[key]['count']++
+            stat[key]['last']=packet.ts
         if key in huge_flows:
             huge_flows[key].add(packet.rtt)
         else:
@@ -54,3 +61,11 @@ if __name__ == "__main__":
                     del small_flows[key]
             else:
                 small_flows[key] = [packet.rtt]
+                stat[key] = {'count':0, 'first':packet.ts,'last':packet.ts}
+
+
+    # alla fine dell'esperimento:
+    # calcolo accuracy
+    # calcolo long/short e big/small flows
+    # sparsita (# bucket diversi da zero)
+
