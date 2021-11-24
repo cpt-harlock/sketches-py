@@ -284,12 +284,12 @@ class LogCollapsingHighestDenseDDSketch(BaseDDSketch):
         )
 
 class FixedSizeDDSketch(BaseDDSketch):
-    def __init__(self, max_value, min_value, relative_accuracy=None, bin_limit=None ):
+    def __init__(self, max_value, min_value, relative_accuracy=None, bin_limit=None, bytes_per_bin=1 ):
 
         assert relative_accuracy is not None or bin_limit is not None
         mapping = LogarithmicMaxMinMapping(max_value, min_value, relative_accuracy, bin_limit,)
-        store = FixedSizeStore(mapping.min_key_value, mapping.max_key_value)
-        negative_store = FixedSizeStore(mapping.min_key_value, mapping.max_key_value)
+        store = FixedSizeStore(mapping.min_key_value, mapping.max_key_value, bytes_per_bin)
+        negative_store = FixedSizeStore(mapping.min_key_value, mapping.max_key_value, bytes_per_bin)
         super().__init__(
             mapping=mapping, store=store, negative_store=negative_store, zero_count=0
         )

@@ -446,13 +446,15 @@ class FixedSizeStore(Store):
         offset (int): the difference btw the keys and the index in which they are stored
         bins (List[int]): the bins
     """
-    def __init__(self, min_key, max_key):
+    def __init__(self, min_key, max_key, bytes_per_bin=1):
         self.count = 0
         self.min_key = min_key
         self.max_key = max_key
         self.bin_limit = (max_key - min_key) + 1
         self.offset = min_key
         self.bins = [0] * self.bin_limit
+        self.bytes_per_bin = bytes_per_bin
+        self.max_value_per_bin = ((2**(self.bytes_per_bin*8)) - 1) 
 
 
     def copy(self, store):
@@ -463,6 +465,7 @@ class FixedSizeStore(Store):
         self.bin_limit = store.bin_limit
         self.offset = store.offset
         self.bins = store.bins[:]
+        self.bytes_per_bin = store.bytes_per_bin
 
     def length(self):
         """the number of bins"""
@@ -472,8 +475,10 @@ class FixedSizeStore(Store):
         """Updates the counter at the specified index key, growing the number of bins if
         necessary."""
         idx = self._get_index(key)
-        self.bins[idx] += weight
-        self.count += weight
+        # compute max available increment
+        increment = min(weight, self.max_value_per_bin - self.bins[idx])
+        self.bins[idx] += increment
+        self.count += increment 
 
     def _get_index(self, key):
         """calculate the bin index for the key"""
@@ -513,3 +518,11 @@ class FixedSizeStore(Store):
         for idx, _ in enumerate(self.bins):
             self.bins[idx] += store.bins[idx]
 
+    def get_total_memory(self):
+        return self.bin_limit*self.bytes_per_bin
+    def get_unused_memory(self):
+        mem = 0
+        for v in self.bins:
+            if v == 0:
+                mem += self.bytes_per_bin
+        return mem
